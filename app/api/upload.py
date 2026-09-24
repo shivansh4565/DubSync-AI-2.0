@@ -74,8 +74,22 @@ async def upload_video_from_url(payload: UrlUploadRequest):
     if FFMPEG_DIR and FFMPEG_DIR not in os.environ.get("PATH", ""):
         os.environ["PATH"] = FFMPEG_DIR + os.pathsep + os.environ.get("PATH", "")
 
+    cookie_file = None
+    if os.path.exists("cookies.txt"):
+        cookie_file = "cookies.txt"
+    elif os.getenv("YOUTUBE_COOKIES"):
+        try:
+            cookie_path = UPLOAD_DIR.parent / "temp" / "cookies.txt"
+            cookie_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(cookie_path, "w", encoding="utf-8") as cf:
+                cf.write(os.getenv("YOUTUBE_COOKIES", ""))
+            cookie_file = str(cookie_path)
+        except Exception:
+            pass
+
     client_strategies = [
         ["ios", "android"],
+        ["web_creator", "android"],
         ["android_creator", "android"],
         ["android", "ios", "mweb"]
     ]
@@ -107,6 +121,9 @@ async def upload_video_from_url(payload: UrlUploadRequest):
                     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
                 }
             }
+
+            if cookie_file and os.path.exists(cookie_file):
+                ydl_opts["cookiefile"] = cookie_file
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
