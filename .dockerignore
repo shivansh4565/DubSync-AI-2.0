@@ -1,0 +1,13 @@
+.venv
+.git
+__pycache__
+*.pyc
+
+uploads
+outputs
+temp
+tts_output
+
+.env
+.vscode
+.idea

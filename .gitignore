@@ -1,0 +1,38 @@
+# Virtual environment
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+uploads/
+temp/
+tts_output/
+outputs/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+node_modules/
+.next/
+
+# macOS & IDE
+.vscode/
+.idea/
+.DS_Store

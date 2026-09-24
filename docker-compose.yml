@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+
+  dubsync-ai:
+
+    build: .
+
+    container_name: dubsync-ai
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./temp:/app/temp
+      - ./tts_output:/app/tts_output
+
+    env_file:
+      - .env
+
+    restart: unless-stopped
