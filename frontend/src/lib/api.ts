@@ -1,6 +1,7 @@
 import { Job, Language } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
@@ -128,8 +129,10 @@ export async function getJobsHistory(): Promise<Job[]> {
 export function getVideoMediaUrl(pathOrUrl?: string): string {
   if (!pathOrUrl) return "";
   if (pathOrUrl.startsWith("http")) return pathOrUrl;
-  if (pathOrUrl.startsWith("/media")) return `${API_BASE_URL}${pathOrUrl}`;
-  return `${API_BASE_URL}/${pathOrUrl.replace(/\\/g, "/")}`;
+  const cleanPath = pathOrUrl.startsWith("/")
+    ? pathOrUrl
+    : `/${pathOrUrl.replace(/\\/g, "/")}`;
+  return `${API_BASE_URL}${cleanPath}`;
 }
 
 export function getDownloadUrl(jobId: string): string {

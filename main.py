@@ -25,6 +25,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def normalize_slashes_middleware(request, call_next):
+    # Normalize accidental double slashes (e.g. //health -> /health)
+    path = request.scope.get("path", "")
+    if "//" in path:
+        import re
+        request.scope["path"] = re.sub(r"/+", "/", path)
+    return await call_next(request)
+
 # Mount media static directories for in-browser video playback
 app.mount("/media/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.mount("/media/outputs", StaticFiles(directory=str(OUTPUT_DIR)), name="outputs")
