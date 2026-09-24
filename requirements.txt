@@ -31,7 +31,7 @@ gTTS>=2.5.4
 ffmpeg-python>=0.2.0
 imageio-ffmpeg>=0.5.1
 pydub>=0.25.1
-audioop-lts>=0.2.1
+audioop-lts>=0.2.1; python_version >= '3.13'
 moviepy>=2.2.1
 
 
