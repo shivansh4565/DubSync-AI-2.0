@@ -89,15 +89,18 @@ def merge_video(video_path: str, speech_files: list, output_dir: str, job_id: st
     res_fast = subprocess.run(cmd_merge_fast, capture_output=True, text=True)
 
     if res_fast.returncode != 0 or not os.path.exists(output_video) or os.path.getsize(output_video) == 0:
-        # 2nd attempt: Full re-encode for complete compatibility with all codecs
+        # 2nd attempt: Full re-encode with ultrafast preset for fast cloud rendering
         cmd_merge_reencode = [
             ffmpeg_exe,
             "-y",
             "-i", str(video_path),
             "-i", str(audio_path),
             "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-threads", "4",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
+            "-b:a", "128k",
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-shortest",
