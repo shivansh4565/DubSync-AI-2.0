@@ -1,16 +1,26 @@
 import { Job, Language } from "@/types";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
+export const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
+    // Try direct backend first
     const res = await fetch(`${API_BASE_URL}/health`, {
       method: "GET",
       cache: "no-store",
     });
     return res.ok;
   } catch {
+    // If blocked by adblock/client (ERR_BLOCKED_BY_CLIENT), try same-origin proxy
+    try {
+      if (typeof window !== "undefined") {
+        const proxyRes = await fetch("/api/py/health", { cache: "no-store" });
+        return proxyRes.ok;
+      }
+    } catch {
+      // ignore
+    }
     return false;
   }
 }
