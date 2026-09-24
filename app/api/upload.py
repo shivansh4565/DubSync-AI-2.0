@@ -74,47 +74,61 @@ async def upload_video_from_url(payload: UrlUploadRequest):
     if FFMPEG_DIR and FFMPEG_DIR not in os.environ.get("PATH", ""):
         os.environ["PATH"] = FFMPEG_DIR + os.pathsep + os.environ.get("PATH", "")
 
-    ydl_error = None
-    try:
-        ydl_opts = {
-            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best",
-            "outtmpl": save_template,
-            "merge_output_format": "mp4",
-            "ffmpeg_location": FFMPEG_EXE or FFMPEG_DIR,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "web", "mweb"]
+    client_strategies = [
+        ["ios", "android"],
+        ["android_creator", "android"],
+        ["android", "ios", "mweb"]
+    ]
+
+    download_success = False
+    title = "Online Video"
+    ext = "mp4"
+    actual_file = None
+
+    for client_list in client_strategies:
+        try:
+            ydl_opts = {
+                "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best",
+                "outtmpl": save_template,
+                "merge_output_format": "mp4",
+                "ffmpeg_location": FFMPEG_EXE or FFMPEG_DIR,
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": client_list
+                    }
+                },
+                "nocheckcertificate": True,
+                "quiet": True,
+                "no_warnings": True,
+                "geo_bypass": True,
+                "socket_timeout": 30,
+                "max_filesize": 250 * 1024 * 1024,
+                "http_headers": {
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
                 }
-            },
-            "nocheckcertificate": True,
-            "quiet": True,
-            "no_warnings": True,
-            "max_filesize": 250 * 1024 * 1024,
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
-        }
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = info.get("title", "Online Video")
-            ext = info.get("ext", "mp4")
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                title = info.get("title", "Online Video")
+                ext = info.get("ext", "mp4")
 
-        matching_files = list(UPLOAD_DIR.glob(f"{job_id}.*"))
-        if not matching_files:
-            raise Exception("Downloaded video file not found on disk after yt-dlp execution.")
+            matching_files = list(UPLOAD_DIR.glob(f"{job_id}.*"))
+            if matching_files and matching_files[0].stat().st_size > 1024:
+                actual_file = matching_files[0]
+                download_success = True
+                break
+        except Exception as e:
+            ydl_error = str(e)
+            continue
 
-        actual_file = matching_files[0]
-
+    if download_success and actual_file:
         # Verify file size and header to ensure it is not HTML
-        if actual_file.stat().st_size < 1024:
-            raise Exception("Downloaded file is too small to be a valid video.")
-
         with open(actual_file, "rb") as f:
             header = f.read(512).lower()
             if b"<!doctype html" in header or b"<html" in header or b"<head" in header:
                 actual_file.unlink(missing_ok=True)
-                raise Exception("The URL returned a webpage instead of media content.")
+                raise HTTPException(status_code=400, detail="The URL returned a webpage instead of video content.")
 
         filename = actual_file.name
         original_url = f"/media/uploads/{filename}"
@@ -136,9 +150,6 @@ async def upload_video_from_url(payload: UrlUploadRequest):
             "video_url": original_url,
             "title": title
         }
-
-    except Exception as e:
-        ydl_error = str(e)
 
     # Fallback ONLY for direct video file URLs (e.g. .mp4, .webm, or video content-type), NOT for social platform URLs
     is_social_url = any(domain in url.lower() for domain in ["youtube.com", "youtu.be", "vimeo.com", "tiktok.com", "instagram.com", "twitter.com", "x.com"])
